@@ -20,6 +20,11 @@ public class CanalController {
         return canalRepository.findAll();
     }
 
+    @GetMapping("/buscar")
+    public List<Canal> buscarPorNombre(@RequestParam String nombre) {
+        return canalRepository.findByNombreContainingIgnoreCase(nombre);
+    }
+
     @GetMapping("/actualizar")
     public String forzarActualizacion() {
         canalService.actualizarCanales();
