@@ -15,7 +15,7 @@ public class Canal {
     @Column(length = 1000)
     private String logoUrl;
 
-    @Column(length = 1000) // Ponemos 1000 porque las URLs a veces son muy largas
+    @Column(length = 1000) 
     private String streamUrl;
 
     // Getters y Setters
