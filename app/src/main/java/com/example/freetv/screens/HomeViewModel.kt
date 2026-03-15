@@ -1,4 +1,4 @@
-package com.example.freetv.ui.theme
+package com.example.freetv.screens
 
 import androidx.lifecycle.ViewModel
 
