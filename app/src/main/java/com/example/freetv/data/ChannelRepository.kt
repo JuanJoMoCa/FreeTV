@@ -1,6 +1,9 @@
 package com.example.freetv.data
 
-class ChannelRepository(private val api: TvApi = ApiClient.apiService) {
+class ChannelRepository() {
+    
+    private val api get() = ApiClient.apiService
+
     suspend fun getChannels(): Result<List<Channel>> {
         return try {
             val response = api.getChannels()

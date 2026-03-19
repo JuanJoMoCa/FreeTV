@@ -19,7 +19,7 @@ object ApiClient {
     }
 
     fun getBaseUrl(): String {
-        return if (isUsbMode) "http://localhost:8080/" else "http://$currentIp:8080/"
+        return if (isUsbMode) "http://127.0.0.1:8080/" else "http://$currentIp:8080/"
     }
 
     fun isUsbModeActive(): Boolean = isUsbMode

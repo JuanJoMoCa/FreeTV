@@ -30,7 +30,7 @@ sealed class CheckStatus {
     object Idle : CheckStatus()
     object Checking : CheckStatus()
     object Success : CheckStatus()
-    data class Error(val message: String, val type: ErrorType) : CheckStatus()
+    data class Error(val message: String, val rawError: String, val type: ErrorType) : CheckStatus()
 }
 
 enum class ErrorType {
@@ -64,7 +64,7 @@ class SplashViewModel(private val repository: ChannelRepository = ChannelReposit
                         ErrorType.NETWORK_ISSUE -> "Problema de red. Asegúrate de que el celular y la PC estén en el mismo Wi-Fi o red local."
                     }
                     
-                    _status.value = CheckStatus.Error(detailedMessage, type)
+                    _status.value = CheckStatus.Error(detailedMessage, errorMsg, type)
                 }
         }
     }
@@ -148,6 +148,7 @@ fun SplashScreen(
                     )
                     is CheckStatus.Error -> DiagnosticError(
                         message = state.message,
+                        rawError = state.rawError,
                         onRetry = { viewModel.runDiagnostics() },
                         onChangeMode = { showIpDialog = true }
                     )
@@ -252,7 +253,7 @@ fun DiagnosticItem(icon: ImageVector, text: String, loading: Boolean = false, co
 }
 
 @Composable
-fun DiagnosticError(message: String, onRetry: () -> Unit, onChangeMode: () -> Unit) {
+fun DiagnosticError(message: String, rawError: String, onRetry: () -> Unit, onChangeMode: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
         modifier = Modifier.fillMaxWidth()
@@ -273,6 +274,13 @@ fun DiagnosticError(message: String, onRetry: () -> Unit, onChangeMode: () -> Un
                 text = message,
                 textAlign = TextAlign.Center,
                 fontSize = 13.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Raw: $rawError",
+                textAlign = TextAlign.Center,
+                fontSize = 10.sp,
+                color = Color.Gray
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
