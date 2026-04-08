@@ -1,8 +1,16 @@
 package com.example.freetv.data
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "channels")
 data class Channel(
-    val id: Long,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
     val nombre: String,
+    val categoria: String = "General",
     val logoUrl: String,
-    val streamUrl: String
+    val streamUrl: String,
+    val isFavorite: Boolean = false,
+    val lastWatched: Long = 0
 )

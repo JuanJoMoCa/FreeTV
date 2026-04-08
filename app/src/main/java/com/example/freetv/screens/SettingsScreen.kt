@@ -1,61 +1,40 @@
 package com.example.freetv.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-
-class SettingsViewModel : ViewModel() {
-    var subtitulosActivados by mutableStateOf(false)
-        private set
-    var aceleracionHardware by mutableStateOf(true)
-        private set
-    var resolucionSeleccionada by mutableStateOf("Automática")
-        private set
-    var idiomaSeleccionado by mutableStateOf("Español (Latino)")
-        private set
-
-    fun toggleSubtitulos(activo: Boolean) { subtitulosActivados = activo }
-    fun toggleAceleracion(activo: Boolean) { aceleracionHardware = activo }
-    fun setResolucion(res: String) { resolucionSeleccionada = res }
-    fun setIdioma(idioma: String) { idiomaSeleccionado = idioma }
-
-    fun limpiarCache() {
-        println("Limpiando caché de canales...")
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SharedTvViewModel,
+    onNavigateBack: () -> Unit
 ) {
+    val settings by viewModel.settings.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Configuraciones", fontWeight = FontWeight.Bold) },
+                title = { Text("Configuración Local", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -67,88 +46,124 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Reproducción de Video", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Text("Preferencias del Usuario", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
-            SettingDropdown(
-                titulo = "Calidad de Video",
-                descripcion = "Reduce la calidad si tu internet es lento",
+            // Dynamic Persistent Settings
+            PersistentSettingSwitch(
+                titulo = "Aceleración por Hardware",
+                descripcion = "Usa el GPU para decodificar video",
+                key = "hw_acceleration",
+                defaultValue = "true",
+                currentSettings = settings,
+                onValueChange = { viewModel.updateSetting("hw_acceleration", it) }
+            )
+
+            PersistentSettingSwitch(
+                titulo = "Reproducción Automática",
+                descripcion = "Inicia el siguiente canal al terminar",
+                key = "autoplay",
+                defaultValue = "false",
+                currentSettings = settings,
+                onValueChange = { viewModel.updateSetting("autoplay", it) }
+            )
+
+            Divider()
+
+            Text("Calidad y Región", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+
+            PersistentSettingDropdown(
+                titulo = "Calidad Máxima",
+                descripcion = "Selecciona la resolución preferida",
+                key = "max_resolution",
+                defaultValue = "Automática",
                 opciones = listOf("Automática", "1080p", "720p", "480p"),
-                seleccionActual = viewModel.resolucionSeleccionada,
-                onSeleccion = { viewModel.setResolucion(it) }
-            )
-
-            SettingSwitch(
-                titulo = "Aceleración por hardware",
-                descripcion = "Mejora el rendimiento del video (desactívalo si la pantalla parpadea)",
-                checado = viewModel.aceleracionHardware,
-                onCambio = { viewModel.toggleAceleracion(it) }
+                currentSettings = settings,
+                onValueChange = { viewModel.updateSetting("max_resolution", it) }
             )
 
             Divider()
 
-            Text("Audio y Subtítulos", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Text("Mantenimiento", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
-            SettingDropdown(
-                titulo = "Idioma de Audio Preferido",
-                descripcion = "Se aplicará si el canal tiene múltiples pistas de audio",
-                opciones = listOf("Español (Latino)", "Inglés", "Idioma Original"),
-                seleccionActual = viewModel.idiomaSeleccionado,
-                onSeleccion = { viewModel.setIdioma(it) }
-            )
-
-            SettingSwitch(
-                titulo = "Mostrar Subtítulos",
-                descripcion = "Activa los subtítulos cerrados (Closed Captions) si están disponibles",
-                checado = viewModel.subtitulosActivados,
-                onCambio = { viewModel.toggleSubtitulos(it) }
-            )
-
-            Divider()
-
-            Text("Avanzado", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-
-            Button(
-                onClick = { viewModel.limpiarCache() },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Limpiar caché de canales y reiniciar lista")
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Base de Datos Local (Room)", fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "Toda tu información se guarda de forma persistente en el dispositivo. No se utiliza servidor externo.",
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = { viewModel.syncWithRemote() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Forzar Resincronización de Canales")
+            }
         }
     }
 }
 
 @Composable
-fun SettingSwitch(titulo: String, descripcion: String, checado: Boolean, onCambio: (Boolean) -> Unit) {
+fun PersistentSettingSwitch(
+    titulo: String, 
+    descripcion: String, 
+    key: String, 
+    defaultValue: String,
+    currentSettings: Map<String, String>,
+    onValueChange: (String) -> Unit
+) {
+    val isChecked = currentSettings[key]?.toBoolean() ?: defaultValue.toBoolean()
+    
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = titulo, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            Text(text = descripcion, fontSize = 14.sp, color = Color.Gray)
+            Text(text = titulo, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(text = descripcion, fontSize = 13.sp, color = Color.Gray)
         }
-        Switch(checked = checado, onCheckedChange = onCambio)
+        Switch(checked = isChecked, onCheckedChange = { onValueChange(it.toString()) })
     }
 }
 
 @Composable
-fun SettingDropdown(titulo: String, descripcion: String, opciones: List<String>, seleccionActual: String, onSeleccion: (String) -> Unit) {
+fun PersistentSettingDropdown(
+    titulo: String, 
+    descripcion: String, 
+    key: String, 
+    defaultValue: String,
+    opciones: List<String>,
+    currentSettings: Map<String, String>,
+    onValueChange: (String) -> Unit
+) {
     var expandido by remember { mutableStateOf(false) }
+    val seleccionActual = currentSettings[key] ?: defaultValue
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { expandido = true }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = titulo, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            Text(text = descripcion, fontSize = 14.sp, color = Color.Gray)
+            Text(text = titulo, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(text = descripcion, fontSize = 13.sp, color = Color.Gray)
         }
 
         Box {
@@ -163,7 +178,7 @@ fun SettingDropdown(titulo: String, descripcion: String, opciones: List<String>,
                     DropdownMenuItem(
                         text = { Text(opcion) },
                         onClick = {
-                            onSeleccion(opcion)
+                            onValueChange(opcion)
                             expandido = false
                         }
                     )

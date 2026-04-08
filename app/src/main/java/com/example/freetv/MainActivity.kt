@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.freetv.screens.*
 import com.example.freetv.ui.theme.FreeTVTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -39,9 +40,8 @@ class MainActivity : ComponentActivity() {
 fun FreeTVAppNavigation() {
     val navController = rememberNavController()
     
-    // We create a shared ViewModel since we need the channel list and switching logic
-    // available in both Home and Player screens.
-    val sharedTvViewModel: SharedTvViewModel = remember { SharedTvViewModel() }
+    // We use a shared ViewModel that is initialized with the Application context for Room
+    val sharedTvViewModel: SharedTvViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = "splash") {
         
@@ -81,6 +81,7 @@ fun FreeTVAppNavigation() {
 
         composable("settings") {
             SettingsScreen(
+                viewModel = sharedTvViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
