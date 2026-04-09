@@ -106,10 +106,17 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     fun syncWithRemote() {
         viewModelScope.launch {
             _isLoading.value = true
+            _error.value = null
             try {
                 repository.syncChannels()
             } catch (e: Exception) {
-                _error.value = "Fallback a caché local. Sync falló: ${e.message}"
+                // Verificamos de forma segura si hay datos en la BD local (CACHE)
+                val count = repository.getChannelCount()
+                if (count > 0) {
+                    _error.value = "Sincronización fallida. Cargando canales guardados."
+                } else {
+                    _error.value = "Error de conexión: No se pudo obtener el catálogo."
+                }
             } finally {
                 _isLoading.value = false
             }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -71,21 +72,35 @@ fun SplashScreen(
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } else if (error != null && channels.isEmpty()) {
-                // Persistent error only if no local cache exists
+            } else if (error != null) {
+                // Se detectó un error (Sincronización fallida o Error de conexión)
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = Color.Red
+                )
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "No se pudo conectar. Verifica tu conexión a internet e intenta de nuevo.",
-                    color = MaterialTheme.colorScheme.error,
+                    text = error!!,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 32.dp)
                 )
-                Button(
-                    onClick = { sharedViewModel.syncWithRemote() },
-                    modifier = Modifier.padding(top = 16.dp)
-                ) {
-                    Text("Reintentar")
+                
+                if (channels.isEmpty()) {
+                    // Si no hay datos, forzar reintento
+                    Button(
+                        onClick = { sharedViewModel.syncWithRemote() },
+                        modifier = Modifier.padding(top = 24.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Reintentar conexión")
+                    }
                 }
             } else {
+                // Todo salió bien
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
@@ -100,12 +115,5 @@ fun SplashScreen(
                 )
             }
         }
-        
-        Text(
-            text = "Versión 2.0 - Arquitectura local-first",
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
-            fontSize = 10.sp,
-            color = Color.Gray
-        )
     }
 }

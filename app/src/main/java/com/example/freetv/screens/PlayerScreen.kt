@@ -60,8 +60,27 @@ fun PlayerScreen(
         URLDecoder.decode(currentUrl, StandardCharsets.UTF_8.toString())
     }
     
+    var playbackError by remember { mutableStateOf<String?>(null) }
+    
     val videoPlayerManager = remember { VideoPlayerManager(context) }
     val exoPlayer = remember(decodedUrl) { videoPlayerManager.getPlayer(decodedUrl) }
+
+    // Detección de errores del reproductor
+    LaunchedEffect(exoPlayer) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                playbackError = "Canal no disponible"
+            }
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == androidx.media3.common.Player.STATE_READY) {
+                    playbackError = null
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        // Check if already in error
+        if (exoPlayer.playerError != null) playbackError = "Canal no disponible"
+    }
 
     val activity = context as? Activity
     
@@ -86,6 +105,12 @@ fun PlayerScreen(
         } else {
             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
+    }
+
+    val retryPlayback = {
+        playbackError = null
+        exoPlayer.prepare()
+        exoPlayer.play()
     }
 
     LaunchedEffect(initialStreamUrl) {
@@ -116,6 +141,10 @@ fun PlayerScreen(
     ) {
         if (isLandscape) {
             PlayerContainer(exoPlayer, modifier = Modifier.fillMaxSize())
+            
+            if (playbackError != null) {
+                ErrorOverlay(message = playbackError!!, onRetry = retryPlayback)
+            }
 
             AnimatedVisibility(
                 visible = showControls,
@@ -163,6 +192,10 @@ fun PlayerScreen(
                         .background(Color.DarkGray)
                 ) {
                     PlayerContainer(exoPlayer, modifier = Modifier.fillMaxSize())
+                    
+                    if (playbackError != null) {
+                        ErrorOverlay(message = playbackError!!, onRetry = retryPlayback)
+                    }
                 }
 
                 PlayerControlsColumn(
@@ -203,9 +236,11 @@ fun PlayerContainer(exoPlayer: androidx.media3.exoplayer.ExoPlayer, modifier: Mo
     AndroidView(
         factory = { ctx ->
             PlayerView(ctx).apply {
-                player = exoPlayer
                 useController = false
             }
+        },
+        update = { view ->
+            view.player = exoPlayer
         },
         modifier = modifier
     )
@@ -313,6 +348,45 @@ fun PlayerControlsColumn(
             Icon(Icons.Default.Menu, contentDescription = "Lista", modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Text("Ver Lista", fontSize = 13.sp)
+        }
+    }
+}
+
+@Composable
+fun ErrorOverlay(message: String, onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = Color.Red,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = message,
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reintentar")
+            }
         }
     }
 }

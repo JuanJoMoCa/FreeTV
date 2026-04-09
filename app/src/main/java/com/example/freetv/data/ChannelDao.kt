@@ -28,4 +28,7 @@ interface ChannelDao {
 
     @Query("DELETE FROM channels")
     fun clearAllChannels(): Int
+
+    @Query("SELECT COUNT(*) FROM channels")
+    fun getCount(): Int
 }

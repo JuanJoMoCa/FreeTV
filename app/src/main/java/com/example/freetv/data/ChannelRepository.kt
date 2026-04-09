@@ -29,4 +29,8 @@ class ChannelRepository(private val channelDao: ChannelDao) {
     suspend fun updateLastWatched(id: Long) = withContext(Dispatchers.IO) {
         channelDao.updateLastWatched(id, System.currentTimeMillis())
     }
+
+    suspend fun getChannelCount(): Int = withContext(Dispatchers.IO) {
+        channelDao.getCount()
+    }
 }
