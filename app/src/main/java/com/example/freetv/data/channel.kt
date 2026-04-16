@@ -11,6 +11,7 @@ data class Channel(
     val categoria: String = "General",
     val logoUrl: String,
     val streamUrl: String,
+    val descripcion: String = "Sin descripción disponible para este canal.",
     val isFavorite: Boolean = false,
     val lastWatched: Long = 0
 )

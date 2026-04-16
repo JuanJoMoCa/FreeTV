@@ -7,9 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -99,12 +96,9 @@ fun HomeScreen(
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            // Category Selector
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -124,7 +118,6 @@ fun HomeScreen(
                 }
             }
 
-            // Featured / Recent Section
             if (recents.isNotEmpty() && searchQuery.isEmpty() && selectedCategory == "Todas") {
                 item {
                     SectionHeader("Continuar Viendo")
@@ -139,7 +132,6 @@ fun HomeScreen(
                 }
             }
 
-            // Favorites Section
             if (favorites.isNotEmpty() && searchQuery.isEmpty() && selectedCategory == "Todas") {
                 item {
                     SectionHeader("Mis Favoritos")
@@ -158,47 +150,30 @@ fun HomeScreen(
                 }
             }
 
-            // All Channels Grid
             item {
                 SectionHeader(if (searchQuery.isNotEmpty()) "Resultados de búsqueda" else "Todos los Canales")
             }
 
             item {
                 val configuration = LocalConfiguration.current
-                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                val columns = if (isLandscape) 4 else 2
-
-                if (isLoading && channels.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else if (channels.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        Text("No se encontraron canales", color = Color.Gray)
-                    }
-                } else {
-                    // We use chunks to simulate a grid inside LazyColumn since nested grids are tricky
-                    val chunks = channels.chunked(columns)
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        chunks.forEach { rowChannels ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                rowChannels.forEach { channel ->
-                                    Box(Modifier.weight(1f)) {
-                                        ChannelCardCompact(
-                                            channel = channel, 
-                                            onClick = { onNavigateToPlayer(channel.streamUrl) },
-                                            onToggleFav = { viewModel.toggleFavorite(channel) }
-                                        )
-                                    }
-                                }
-                                // Fill empty slots if any
-                                repeat(columns - rowChannels.size) {
-                                    Spacer(Modifier.weight(1f))
+                val columns = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 4 else 2
+                val chunks = channels.chunked(columns)
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    chunks.forEach { rowChannels ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rowChannels.forEach { channel ->
+                                Box(Modifier.weight(1f)) {
+                                    ChannelCardCompact(
+                                        channel = channel, 
+                                        onClick = { onNavigateToPlayer(channel.streamUrl) },
+                                        onToggleFav = { viewModel.toggleFavorite(channel) }
+                                    )
                                 }
                             }
+                            repeat(columns - rowChannels.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
@@ -221,39 +196,14 @@ fun SectionHeader(title: String) {
 @Composable
 fun RecentChannelCard(channel: Channel, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .width(160.dp)
-            .height(90.dp)
-            .clickable(onClick = onClick),
+        modifier = Modifier.width(160.dp).height(90.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Box(Modifier.fillMaxSize()) {
-            AsyncImage(
-                model = channel.logoUrl,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                contentScale = ContentScale.Fit
-            )
-            // Play overlay gradient
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
-                        )
-                    )
-            )
-            Text(
-                text = channel.nombre,
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            AsyncImage(model = channel.logoUrl, contentDescription = null, modifier = Modifier.fillMaxSize().padding(16.dp), contentScale = ContentScale.Fit)
+            Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))))
+            Text(text = channel.nombre, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomStart).padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -261,56 +211,19 @@ fun RecentChannelCard(channel: Channel, onClick: () -> Unit) {
 @Composable
 fun ChannelCardLarge(channel: Channel, onClick: () -> Unit, onToggleFav: () -> Unit) {
     Card(
-        modifier = Modifier
-            .width(140.dp)
-            .shadow(8.dp, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
+        modifier = Modifier.width(140.dp).shadow(8.dp, RoundedCornerShape(16.dp)).clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box {
-                AsyncImage(
-                    model = channel.logoUrl,
-                    contentDescription = channel.nombre,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .padding(12.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Fit
-                )
-                IconButton(
-                    onClick = onToggleFav,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .background(Color.Black.copy(alpha = 0.2f), CircleShape)
-                        .size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorito",
-                        tint = if (channel.isFavorite) Color.Red else Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
+                AsyncImage(model = channel.logoUrl, contentDescription = channel.nombre, modifier = Modifier.fillMaxWidth().height(120.dp).padding(12.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
+                IconButton(onClick = onToggleFav, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).background(Color.Black.copy(alpha = 0.2f), CircleShape).size(32.dp)) {
+                    Icon(imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = "Favorito", tint = if (channel.isFavorite) Color.Red else Color.White, modifier = Modifier.size(18.dp))
                 }
             }
-            Text(
-                text = channel.nombre,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = channel.categoria,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Text(text = channel.nombre, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text = channel.categoria, fontSize = 10.sp, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(bottom = 8.dp))
         }
     }
 }
@@ -323,50 +236,16 @@ fun ChannelCardCompact(channel: Channel, onClick: () -> Unit, onToggleFav: () ->
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth().height(180.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.weight(1f)) {
-                AsyncImage(
-                    model = channel.logoUrl,
-                    contentDescription = channel.nombre,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Fit
-                )
-                
-                // Favorite Button
-                IconButton(
-                    onClick = onToggleFav,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (channel.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                AsyncImage(model = channel.logoUrl, contentDescription = channel.nombre, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
+                IconButton(onClick = onToggleFav, modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).size(36.dp)) {
+                    Icon(imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = if (channel.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = channel.nombre,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 16.sp
-            )
-            Text(
-                text = channel.categoria,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.secondary,
-                maxLines = 1
-            )
+            Text(text = channel.nombre, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 16.sp)
+            Text(text = channel.categoria, fontSize = 10.sp, color = MaterialTheme.colorScheme.secondary, maxLines = 1)
         }
     }
 }

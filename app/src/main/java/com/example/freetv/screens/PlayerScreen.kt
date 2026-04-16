@@ -44,6 +44,7 @@ fun PlayerScreen(
     initialStreamUrl: String,
     viewModel: SharedTvViewModel,
     onNavigateBack: () -> Unit,
+    onNavigateToDetails: (String) -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val context = LocalContext.current
@@ -65,7 +66,6 @@ fun PlayerScreen(
     val videoPlayerManager = remember { VideoPlayerManager(context) }
     val exoPlayer = remember(decodedUrl) { videoPlayerManager.getPlayer(decodedUrl) }
 
-    // Detección de errores del reproductor
     LaunchedEffect(exoPlayer) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -78,23 +78,19 @@ fun PlayerScreen(
             }
         }
         exoPlayer.addListener(listener)
-        // Check if already in error
         if (exoPlayer.playerError != null) playbackError = "Canal no disponible"
     }
 
     val activity = context as? Activity
     
-    // Manage Status/Navigation Bar (Netflix Style)
     LaunchedEffect(isLandscape) {
         val window = activity?.window ?: return@LaunchedEffect
         val controller = WindowCompat.getInsetsController(window, view)
         
         if (isLandscape) {
-            // Hide bars in Landscape
             controller.hide(WindowInsetsCompat.Type.systemBars())
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
-            // Show bars in Portrait
             controller.show(WindowInsetsCompat.Type.systemBars())
         }
     }
@@ -120,7 +116,6 @@ fun PlayerScreen(
     DisposableEffect(Unit) {
         onDispose {
             videoPlayerManager.releasePlayer()
-            // Reset everything when leaving
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             val window = activity?.window
             if (window != null) {
@@ -155,11 +150,12 @@ fun PlayerScreen(
                 PlayerControlsColumn(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(185.dp) // even wider to be safe
-                        .background(Color(0xE61E1E1E)) // Darker for better visibility
+                        .width(185.dp)
+                        .background(Color(0xE61E1E1E))
                         .padding(vertical = 12.dp, horizontal = 16.dp)
                         .verticalScroll(rememberScrollState()),
                     onNavigateBack = onNavigateBack,
+                    onNavigateToDetails = { onNavigateToDetails(currentUrl) },
                     onNavigateToSettings = onNavigateToSettings,
                     onPrevChannel = { viewModel.previousChannel()?.let { currentUrl = it } },
                     onNextChannel = { viewModel.nextChannel()?.let { currentUrl = it } },
@@ -206,6 +202,7 @@ fun PlayerScreen(
                         .padding(16.dp)
                         .verticalScroll(rememberScrollState()),
                     onNavigateBack = onNavigateBack,
+                    onNavigateToDetails = { onNavigateToDetails(currentUrl) },
                     onNavigateToSettings = onNavigateToSettings,
                     onPrevChannel = { viewModel.previousChannel()?.let { currentUrl = it } },
                     onNextChannel = { viewModel.nextChannel()?.let { currentUrl = it } },
@@ -250,6 +247,7 @@ fun PlayerContainer(exoPlayer: androidx.media3.exoplayer.ExoPlayer, modifier: Mo
 fun PlayerControlsColumn(
     modifier: Modifier,
     onNavigateBack: () -> Unit,
+    onNavigateToDetails: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onPrevChannel: () -> Unit,
     onNextChannel: () -> Unit,
@@ -264,7 +262,7 @@ fun PlayerControlsColumn(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp) // More space between sections
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(channelName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -272,6 +270,9 @@ fun PlayerControlsColumn(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 IconButton(onClick = onNavigateBack, modifier = Modifier.background(Color(0xFFD32F2F), CircleShape).size(36.dp)) {
                     Icon(Icons.Default.Home, contentDescription = "Inicio", tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                IconButton(onClick = onNavigateToDetails, modifier = Modifier.background(MaterialTheme.colorScheme.primary, CircleShape).size(36.dp)) {
+                    Icon(Icons.Default.Info, contentDescription = "Detalles", tint = Color.White, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onNavigateToSettings, modifier = Modifier.background(Color.Gray, CircleShape).size(36.dp)) {
                     Icon(Icons.Default.Settings, contentDescription = "Config", tint = Color.White, modifier = Modifier.size(18.dp))

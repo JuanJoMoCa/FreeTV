@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -39,8 +38,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FreeTVAppNavigation() {
     val navController = rememberNavController()
-    
-    // We use a shared ViewModel that is initialized with the Application context for Room
     val sharedTvViewModel: SharedTvViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = "splash") {
@@ -75,7 +72,23 @@ fun FreeTVAppNavigation() {
                 initialStreamUrl = streamUrl,
                 viewModel = sharedTvViewModel,
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToDetails = { url ->
+                    val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
+                    navController.navigate("details/$encodedUrl")
+                },
                 onNavigateToSettings = { navController.navigate("settings") }
+            )
+        }
+
+        composable(
+            route = "details/{streamUrl}",
+            arguments = listOf(navArgument("streamUrl") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val streamUrl = backStackEntry.arguments?.getString("streamUrl") ?: ""
+            ChannelDetailScreen(
+                streamUrl = streamUrl,
+                viewModel = sharedTvViewModel,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
