@@ -31,4 +31,7 @@ interface ChannelDao {
 
     @Query("SELECT COUNT(*) FROM channels")
     fun getCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertChannel(channel: Channel): Long
 }

@@ -33,4 +33,8 @@ class ChannelRepository(private val channelDao: ChannelDao) {
     suspend fun getChannelCount(): Int = withContext(Dispatchers.IO) {
         channelDao.getCount()
     }
+
+    suspend fun addCustomChannel(channel: Channel) = withContext(Dispatchers.IO) {
+        channelDao.insertChannel(channel)
+    }
 }

@@ -55,11 +55,12 @@ fun FreeTVAppNavigation() {
         composable("home") {
             HomeScreen(
                 viewModel = sharedTvViewModel,
-                onNavigateToPlayer = { url -> 
+                onNavigateToPlayer = { url ->
                     val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
-                    navController.navigate("player/$encodedUrl") 
+                    navController.navigate("player/$encodedUrl")
                 },
-                onNavigateToSettings = { navController.navigate("settings") }
+                onNavigateToSettings = { navController.navigate("settings") },
+                onNavigateToAddChannel = { navController.navigate("add_channel") }
             )
         }
 
@@ -94,6 +95,13 @@ fun FreeTVAppNavigation() {
 
         composable("settings") {
             SettingsScreen(
+                viewModel = sharedTvViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("add_channel") {
+            AddChannelScreen(
                 viewModel = sharedTvViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

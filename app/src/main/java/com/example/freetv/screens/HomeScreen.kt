@@ -35,7 +35,8 @@ import com.example.freetv.data.Channel
 fun HomeScreen(
     viewModel: SharedTvViewModel,
     onNavigateToPlayer: (String) -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAddChannel: () -> Unit
 ) {
     val channels by viewModel.channels.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
@@ -86,6 +87,9 @@ fun HomeScreen(
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.AccountCircle, contentDescription = "Perfil")
+                    }
+                    IconButton(onClick = onNavigateToAddChannel) {
+                        Icon(Icons.Default.Add, contentDescription = "Agregar Canal")
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(

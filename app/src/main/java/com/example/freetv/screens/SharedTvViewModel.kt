@@ -174,4 +174,17 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         val index = _currentChannelIndex.value
         return if (index in channels.value.indices) channels.value[index].nombre else "Reproduciendo..."
     }
+
+    fun addCustomChannel(nombre: String, url: String) {
+        viewModelScope.launch {
+            val newChannel = Channel(
+                nombre = nombre,
+                categoria = "Personalizado",
+                logoUrl = "",
+                streamUrl = url,
+                descripcion = "Canal añadido manualmente"
+            )
+            repository.addCustomChannel(newChannel)
+        }
+    }
 }
