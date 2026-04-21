@@ -3,6 +3,7 @@ package com.example.freetv.screens
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,6 +18,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeMute
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,6 +41,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.ui.PlayerView
 import com.example.freetv.player.VideoPlayerManager
+import kotlinx.coroutines.flow.collectLatest
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 
@@ -65,6 +71,17 @@ fun PlayerScreen(
     
     val videoPlayerManager = remember { VideoPlayerManager(context) }
     val exoPlayer = remember(decodedUrl) { videoPlayerManager.getPlayer(decodedUrl) }
+
+    val isTimerActive by viewModel.isTimerActive.collectAsState()
+    val timeRemaining by viewModel.timeRemaining.collectAsState()
+    val timerMenuExpanded by viewModel.timerMenuExpanded.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.timerFinishedEvent.collectLatest {
+            exoPlayer.pause()
+            Toast.makeText(context, "Temporizador: Video detenido", Toast.LENGTH_LONG).show()
+        }
+    }
 
     LaunchedEffect(exoPlayer) {
         val listener = object : androidx.media3.common.Player.Listener {
@@ -174,7 +191,19 @@ fun PlayerScreen(
                     currentVolume = exoPlayer.volume,
                     isMuted = isMuted,
                     channelName = viewModel.getCurrentChannelName(),
-                    isLandscape = true
+                    isLandscape = true,
+                    isTimerActive = isTimerActive,
+                    timeRemaining = timeRemaining,
+                    timerMenuExpanded = timerMenuExpanded,
+                    onToggleTimerMenu = { viewModel.setTimerMenuExpanded(it) },
+                    onStartTimer = { 
+                        viewModel.startSleepTimer(it)
+                        Toast.makeText(context, "Temporizador: $it min", Toast.LENGTH_SHORT).show()
+                    },
+                    onCancelTimer = {
+                        viewModel.cancelSleepTimer()
+                        Toast.makeText(context, "Temporizador cancelado", Toast.LENGTH_SHORT).show()
+                    }
                 )
             }
         } else {
@@ -221,7 +250,19 @@ fun PlayerScreen(
                     currentVolume = exoPlayer.volume,
                     isMuted = isMuted,
                     channelName = viewModel.getCurrentChannelName(),
-                    isLandscape = false
+                    isLandscape = false,
+                    isTimerActive = isTimerActive,
+                    timeRemaining = timeRemaining,
+                    timerMenuExpanded = timerMenuExpanded,
+                    onToggleTimerMenu = { viewModel.setTimerMenuExpanded(it) },
+                    onStartTimer = { 
+                        viewModel.startSleepTimer(it)
+                        Toast.makeText(context, "Temporizador: $it min", Toast.LENGTH_SHORT).show()
+                    },
+                    onCancelTimer = {
+                        viewModel.cancelSleepTimer()
+                        Toast.makeText(context, "Temporizador cancelado", Toast.LENGTH_SHORT).show()
+                    }
                 )
             }
         }
@@ -257,7 +298,13 @@ fun PlayerControlsColumn(
     currentVolume: Float,
     isMuted: Boolean,
     channelName: String,
-    isLandscape: Boolean
+    isLandscape: Boolean,
+    isTimerActive: Boolean,
+    timeRemaining: Long?,
+    timerMenuExpanded: Boolean,
+    onToggleTimerMenu: (Boolean) -> Unit,
+    onStartTimer: (Int) -> Unit,
+    onCancelTimer: () -> Unit
 ) {
     Column(
         modifier = modifier,
@@ -280,7 +327,7 @@ fun PlayerControlsColumn(
             }
         }
 
-        Divider(modifier = Modifier.padding(horizontal = 4.dp), color = Color.DarkGray)
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 4.dp), color = Color.DarkGray)
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("CANAL", color = Color.LightGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -304,21 +351,21 @@ fun PlayerControlsColumn(
                     modifier = Modifier.size(32.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.DarkGray)
                 ) {
-                    Icon(Icons.Default.VolumeDown, contentDescription = "Low", tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = "Low", tint = Color.White, modifier = Modifier.size(16.dp))
                 }
                 FilledIconButton(
                     onClick = onToggleMute,
                     modifier = Modifier.size(40.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = if (isMuted) Color.Red else Color.DarkGray)
                 ) {
-                    Icon(if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeMute, contentDescription = "Mute", tint = Color.White)
+                    Icon(if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeMute, contentDescription = "Mute", tint = Color.White)
                 }
                 FilledIconButton(
                     onClick = { onVolumeChange((currentVolume + 0.1f).coerceAtMost(1f)) },
                     modifier = Modifier.size(32.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.DarkGray)
                 ) {
-                    Icon(Icons.Default.VolumeUp, contentDescription = "High", tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "High", tint = Color.White, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -326,16 +373,66 @@ fun PlayerControlsColumn(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("PANTALLA", color = Color.LightGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(10.dp))
-            FilledIconButton(
-                onClick = onToggleOrientation,
-                modifier = Modifier.size(40.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Icon(
-                    imageVector = if (isLandscape) Icons.Default.StayCurrentPortrait else Icons.Default.StayCurrentLandscape,
-                    contentDescription = "Girar Pantalla",
-                    tint = Color.White
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FilledIconButton(
+                    onClick = onToggleOrientation,
+                    modifier = Modifier.size(40.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Icon(
+                        imageVector = if (isLandscape) Icons.Default.StayCurrentPortrait else Icons.Default.StayCurrentLandscape,
+                        contentDescription = "Girar Pantalla",
+                        tint = Color.White
+                    )
+                }
+                
+                Box {
+                    FilledIconButton(
+                        onClick = { onToggleTimerMenu(true) },
+                        modifier = Modifier.size(40.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (isTimerActive) Color(0xFF4CAF50) else Color.DarkGray
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = "Sleep Timer",
+                            tint = Color.White
+                        )
+                    }
+                    
+                    DropdownMenu(
+                        expanded = timerMenuExpanded,
+                        onDismissRequest = { onToggleTimerMenu(false) },
+                        modifier = Modifier.background(Color(0xFF2C2C2C))
+                    ) {
+                        if (isTimerActive) {
+                            val minutes = (timeRemaining ?: 0L) / 60000
+                            val seconds = ((timeRemaining ?: 0L) % 60000) / 1000
+                            DropdownMenuItem(
+                                text = { Text("Quedan: ${minutes}m ${seconds}s", color = Color.White) },
+                                onClick = { }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Desactivar temporizador", color = Color.Red) },
+                                onClick = {
+                                    onCancelTimer()
+                                    onToggleTimerMenu(false)
+                                }
+                            )
+                            HorizontalDivider(color = Color.DarkGray)
+                        }
+                        listOf(1, 5, 10, 15, 30, 60).forEach { mins ->
+                            DropdownMenuItem(
+                                text = { Text("$mins min", color = Color.White) },
+                                onClick = {
+                                    onStartTimer(mins)
+                                    onToggleTimerMenu(false)
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
 

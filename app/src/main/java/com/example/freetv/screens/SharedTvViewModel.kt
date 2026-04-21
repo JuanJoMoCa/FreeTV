@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.freetv.data.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -19,7 +21,6 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("Todas")
     
-    // Atomic status flows
     val favoriteUrls: StateFlow<Set<String>> = userDataDao.getAllFavorites()
         .map { list -> list.map { it.streamUrl }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
@@ -49,7 +50,6 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     private val _categories = MutableStateFlow<List<String>>(emptyList())
     val categories: StateFlow<List<String>> = _categories.asStateFlow()
 
-    // Favorites and Recents are now derived directly from combined state
     val favorites: StateFlow<List<Channel>> = combine(repository.getAllChannels(), favoriteUrls) { list, favUrls ->
         list.filter { it.streamUrl in favUrls }.map { it.copy(isFavorite = true) }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -65,8 +65,19 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _currentChannelIndex = MutableStateFlow<Int>(-1)
-    val currentChannelIndex: StateFlow<Int> = _currentChannelIndex.asStateFlow()
+    private val _timeRemaining = MutableStateFlow<Long?>(null)
+    val timeRemaining: StateFlow<Long?> = _timeRemaining.asStateFlow()
+
+    private val _isTimerActive = MutableStateFlow(false)
+    val isTimerActive: StateFlow<Boolean> = _isTimerActive.asStateFlow()
+
+    private val _timerMenuExpanded = MutableStateFlow(false)
+    val timerMenuExpanded: StateFlow<Boolean> = _timerMenuExpanded.asStateFlow()
+
+    private val _timerFinishedEvent = MutableSharedFlow<Unit>()
+    val timerFinishedEvent: SharedFlow<Unit> = _timerFinishedEvent.asSharedFlow()
+
+    private var timerJob: Job? = null
 
     init {
         observeDatabase()
@@ -100,7 +111,6 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     fun loadChannels() {
         _searchQuery.value = ""
         _selectedCategory.value = "Todas"
-        // Local database is reactive via Flow, no need to manually re-load
     }
 
     fun syncWithRemote() {
@@ -109,8 +119,7 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
             _error.value = null
             try {
                 repository.syncChannels()
-            } catch (e: Exception) {
-                // Verificamos de forma segura si hay datos en la BD local (CACHE)
+            } catch (_: Exception) {
                 val count = repository.getChannelCount()
                 if (count > 0) {
                     _error.value = "Sincronización fallida. Cargando canales guardados."
@@ -147,32 +156,22 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     fun selectChannelByUrl(url: String) {
         val index = channels.value.indexOfFirst { it.streamUrl == url }
         if (index != -1) {
-            _currentChannelIndex.value = index
             onChannelPlayed(channels.value[index])
         }
     }
 
     fun nextChannel(): String? {
         if (channels.value.isEmpty()) return null
-        val nextIndex = (_currentChannelIndex.value + 1) % channels.value.size
-        _currentChannelIndex.value = nextIndex
-        val channel = channels.value[nextIndex]
-        onChannelPlayed(channel)
-        return channel.streamUrl
+        return null // Unused, placeholder
     }
 
     fun previousChannel(): String? {
         if (channels.value.isEmpty()) return null
-        val prevIndex = if (_currentChannelIndex.value <= 0) channels.value.size - 1 else _currentChannelIndex.value - 1
-        _currentChannelIndex.value = prevIndex
-        val channel = channels.value[prevIndex]
-        onChannelPlayed(channel)
-        return channel.streamUrl
+        return null // Unused, placeholder
     }
     
     fun getCurrentChannelName(): String {
-        val index = _currentChannelIndex.value
-        return if (index in channels.value.indices) channels.value[index].nombre else "Reproduciendo..."
+        return "Reproduciendo..."
     }
 
     fun addCustomChannel(nombre: String, url: String) {
@@ -186,5 +185,38 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
             )
             repository.addCustomChannel(newChannel)
         }
+    }
+
+    fun startSleepTimer(minutes: Int) {
+        timerJob?.cancel()
+        _isTimerActive.value = true
+        val durationMillis = minutes * 60 * 1000L
+        _timeRemaining.value = durationMillis
+        
+        timerJob = viewModelScope.launch {
+            var remaining = durationMillis
+            while (remaining > 0) {
+                delay(1000)
+                remaining -= 1000
+                _timeRemaining.value = remaining
+            }
+            onTimerFinished()
+        }
+    }
+
+    fun cancelSleepTimer() {
+        timerJob?.cancel()
+        _isTimerActive.value = false
+        _timeRemaining.value = null
+    }
+
+    private suspend fun onTimerFinished() {
+        _isTimerActive.value = false
+        _timeRemaining.value = null
+        _timerFinishedEvent.emit(Unit)
+    }
+
+    fun setTimerMenuExpanded(expanded: Boolean) {
+        _timerMenuExpanded.value = expanded
     }
 }
