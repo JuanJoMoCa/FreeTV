@@ -60,7 +60,8 @@ fun FreeTVAppNavigation() {
                     navController.navigate("player/$encodedUrl")
                 },
                 onNavigateToSettings = { navController.navigate("settings") },
-                onNavigateToAddChannel = { navController.navigate("add_channel") }
+                onNavigateToAddChannel = { navController.navigate("add_channel") },
+                onNavigateToMyLists = { navController.navigate("my_lists") }
             )
         }
 
@@ -111,6 +112,14 @@ fun FreeTVAppNavigation() {
             CreateListScreen(
                 viewModel = sharedTvViewModel,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable("my_lists") {
+            MyListsScreen(
+                viewModel = sharedTvViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCreateList = { navController.navigate("create_list") }
             )
         }
     }

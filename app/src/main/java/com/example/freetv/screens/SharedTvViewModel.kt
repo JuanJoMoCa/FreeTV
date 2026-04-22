@@ -29,6 +29,8 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         .map { list -> list.associate { it.streamUrl to it.lastWatched } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
+
+
     val channels: StateFlow<List<Channel>> = combine(
         repository.getAllChannels(),
         _searchQuery,
@@ -46,6 +48,9 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     val settings: StateFlow<Map<String, String>> = settingDao.getAllSettings()
         .map { list -> list.associate { it.key to it.value } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+
+    val customLists: StateFlow<List<CustomListEntity>> = userDataDao.getAllCustomLists()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _categories = MutableStateFlow<List<String>>(emptyList())
     val categories: StateFlow<List<String>> = _categories.asStateFlow()

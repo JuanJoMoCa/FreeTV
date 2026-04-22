@@ -36,7 +36,8 @@ fun HomeScreen(
     viewModel: SharedTvViewModel,
     onNavigateToPlayer: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToAddChannel: () -> Unit
+    onNavigateToAddChannel: () -> Unit,
+    onNavigateToMyLists: () -> Unit
 ) {
     val channels by viewModel.channels.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
@@ -90,6 +91,10 @@ fun HomeScreen(
                     }
                     IconButton(onClick = onNavigateToAddChannel) {
                         Icon(Icons.Default.Add, contentDescription = "Agregar Canal")
+                    }
+
+                    IconButton(onClick = onNavigateToMyLists) {
+                        Icon(Icons.Default.List, contentDescription = "Mis Listas")
                     }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
