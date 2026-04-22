@@ -17,10 +17,10 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     private val repository = ChannelRepository(database.channelDao())
     private val settingDao = database.settingDao()
     private val userDataDao = database.userDataDao()
-    
+
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("Todas")
-    
+
     val favoriteUrls: StateFlow<Set<String>> = userDataDao.getAllFavorites()
         .map { list -> list.map { it.streamUrl }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
@@ -30,7 +30,7 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     val channels: StateFlow<List<Channel>> = combine(
-        repository.getAllChannels(), 
+        repository.getAllChannels(),
         _searchQuery,
         _selectedCategory,
         favoriteUrls
@@ -162,14 +162,14 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
 
     fun nextChannel(): String? {
         if (channels.value.isEmpty()) return null
-        return null // Unused, placeholder
+        return null
     }
 
     fun previousChannel(): String? {
         if (channels.value.isEmpty()) return null
-        return null // Unused, placeholder
+        return null
     }
-    
+
     fun getCurrentChannelName(): String {
         return "Reproduciendo..."
     }
@@ -192,7 +192,7 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         _isTimerActive.value = true
         val durationMillis = minutes * 60 * 1000L
         _timeRemaining.value = durationMillis
-        
+
         timerJob = viewModelScope.launch {
             var remaining = durationMillis
             while (remaining > 0) {
@@ -218,5 +218,45 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
 
     fun setTimerMenuExpanded(expanded: Boolean) {
         _timerMenuExpanded.value = expanded
+    }
+
+    sealed class ListCreationState {
+        object Idle : ListCreationState()
+        object Loading : ListCreationState()
+        object Success : ListCreationState()
+        data class Error(val message: String) : ListCreationState()
+    }
+
+    private val _listCreationState = MutableStateFlow<ListCreationState>(ListCreationState.Idle)
+    val listCreationState: StateFlow<ListCreationState> = _listCreationState.asStateFlow()
+
+    fun resetListCreationState() {
+        _listCreationState.value = ListCreationState.Idle
+    }
+
+    fun createCustomList(name: String, selectedChannelUrls: List<String>) {
+        if (name.isBlank()) {
+            _listCreationState.value = ListCreationState.Error("Campos vacíos")
+            return
+        }
+
+        viewModelScope.launch {
+            _listCreationState.value = ListCreationState.Loading
+            try {
+                withContext(Dispatchers.IO) {
+                    val listId = userDataDao.insertCustomList(CustomListEntity(name = name.trim()))
+
+                    if (selectedChannelUrls.isNotEmpty()) {
+                        val relations = selectedChannelUrls.map { url ->
+                            CustomListChannel(listId = listId, streamUrl = url)
+                        }
+                        userDataDao.insertChannelsToCustomList(relations)
+                    }
+                }
+                _listCreationState.value = ListCreationState.Success
+            } catch (e: Exception) {
+                _listCreationState.value = ListCreationState.Error("Error al guardar los datos")
+            }
+        }
     }
 }

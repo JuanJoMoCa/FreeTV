@@ -106,5 +106,12 @@ fun FreeTVAppNavigation() {
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
+        composable("create_list") {
+            CreateListScreen(
+                viewModel = sharedTvViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }
