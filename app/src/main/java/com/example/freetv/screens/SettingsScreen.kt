@@ -48,7 +48,6 @@ fun SettingsScreen(
         ) {
             Text("Preferencias del Usuario", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
-            // Dynamic Persistent Settings
             PersistentSettingSwitch(
                 titulo = "Aceleración por Hardware",
                 descripcion = "Usa el GPU para decodificar video",

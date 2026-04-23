@@ -25,10 +25,9 @@ fun SplashScreen(
     val channels by sharedViewModel.channels.collectAsState()
     val error by sharedViewModel.error.collectAsState()
 
-    // Automatic navigation when data is loaded
     LaunchedEffect(isLoading, channels) {
         if (!isLoading && channels.isNotEmpty()) {
-            delay(1500) // Small delay for logo visibility
+            delay(1500)
             onSuccess()
         }
     }
@@ -100,7 +99,7 @@ fun SplashScreen(
                     }
                 }
             } else {
-                // Todo salió bien
+                // Todo bien
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
