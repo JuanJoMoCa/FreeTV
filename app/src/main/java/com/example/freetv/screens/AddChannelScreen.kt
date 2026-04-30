@@ -66,20 +66,17 @@ fun AddChannelScreen(
                 horizontalArrangement = Arrangement.End,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                TextButton(onClick = onNavigateBack) { // FA-02: Cancelar
+                TextButton(onClick = onNavigateBack) {
                     Text("Cancelar")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = {
-                    // FA-01: Campos vacíos
                     if (nombre.isBlank() || url.isBlank()) {
                         errorMessage = "Campos obligatorios"
                     }
-                    // Ex-01: Formato de URL inválido
                     else if (!url.trim().endsWith(".m3u8", ignoreCase = true)) {
                         errorMessage = "Error: Formato no compatible"
                     }
-                    // Flujo normal: Guardar
                     else {
                         viewModel.addCustomChannel(nombre.trim(), url.trim())
                         onNavigateBack()
