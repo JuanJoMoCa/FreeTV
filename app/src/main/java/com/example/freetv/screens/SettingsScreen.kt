@@ -3,18 +3,21 @@ package com.example.freetv.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -25,6 +28,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     val settings by viewModel.settings.collectAsState()
+    val isDarkTheme by viewModel.isDarkTheme.collectAsState()
 
     Scaffold(
         topBar = {
@@ -46,6 +50,55 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            Text("Apariencia", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp)),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = "Icono de tema",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Tema Oscuro",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Cambia el esquema de colores",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isDarkTheme,
+                        onCheckedChange = { isDark ->
+                            viewModel.toggleTheme(isDark)
+                        }
+                    )
+                }
+            }
+
+            Divider()
+
             Text("Preferencias del Usuario", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
             PersistentSettingSwitch(
@@ -117,15 +170,15 @@ fun SettingsScreen(
 
 @Composable
 fun PersistentSettingSwitch(
-    titulo: String, 
-    descripcion: String, 
-    key: String, 
+    titulo: String,
+    descripcion: String,
+    key: String,
     defaultValue: String,
     currentSettings: Map<String, String>,
     onValueChange: (String) -> Unit
 ) {
     val isChecked = currentSettings[key]?.toBoolean() ?: defaultValue.toBoolean()
-    
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -141,9 +194,9 @@ fun PersistentSettingSwitch(
 
 @Composable
 fun PersistentSettingDropdown(
-    titulo: String, 
-    descripcion: String, 
-    key: String, 
+    titulo: String,
+    descripcion: String,
+    key: String,
     defaultValue: String,
     opciones: List<String>,
     currentSettings: Map<String, String>,

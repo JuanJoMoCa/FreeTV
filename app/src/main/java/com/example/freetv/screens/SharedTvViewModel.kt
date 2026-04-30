@@ -17,6 +17,7 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     private val repository = ChannelRepository(database.channelDao())
     private val settingDao = database.settingDao()
     private val userDataDao = database.userDataDao()
+    private val themeRepository = ThemeRepository(application)
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("Todas")
@@ -81,6 +82,9 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
 
     private val _timerFinishedEvent = MutableSharedFlow<Unit>()
     val timerFinishedEvent: SharedFlow<Unit> = _timerFinishedEvent.asSharedFlow()
+
+    private val _isDarkTheme = MutableStateFlow(themeRepository.isDarkThemeEnabled())
+    val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
 
     private var timerJob: Job? = null
 
@@ -263,5 +267,10 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
                 _listCreationState.value = ListCreationState.Error("Error al guardar los datos")
             }
         }
+    }
+
+    fun toggleTheme(isDark: Boolean) {
+        _isDarkTheme.value = isDark
+        themeRepository.setDarkThemeEnabled(isDark)
     }
 }

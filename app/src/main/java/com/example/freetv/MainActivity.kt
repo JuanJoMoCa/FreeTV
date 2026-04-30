@@ -3,10 +3,13 @@ package com.example.freetv
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -20,10 +23,14 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class MainActivity : ComponentActivity() {
+    private val sharedTvViewModel: SharedTvViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            FreeTVTheme {
+            val isDarkTheme by sharedTvViewModel.isDarkTheme.collectAsState()
+
+            FreeTVTheme(darkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -41,10 +48,10 @@ fun FreeTVAppNavigation() {
     val sharedTvViewModel: SharedTvViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = "splash") {
-        
+
         composable("splash") {
             SplashScreen(
-                onSuccess = { 
+                onSuccess = {
                     navController.navigate("home") {
                         popUpTo("splash") { inclusive = true }
                     }
