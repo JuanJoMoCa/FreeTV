@@ -29,8 +29,17 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
+    val showClearHistoryDialog by viewModel.showClearHistoryDialog.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.snackbarEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Configuración Local", fontWeight = FontWeight.Bold) },
@@ -136,6 +145,34 @@ fun SettingsScreen(
             Divider()
 
             Text("Mantenimiento", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+
+            Button(
+                onClick = { viewModel.setShowClearHistoryDialog(true) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Limpiar Historial de Visualización")
+            }
+
+            if (showClearHistoryDialog) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.setShowClearHistoryDialog(false) },
+                    title = { Text("Limpiar Historial") },
+                    text = { Text("¿Estás seguro de que deseas borrar tu historial de visualización?") },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.clearHistory() }) {
+                            Text("Aceptar")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { viewModel.setShowClearHistoryDialog(false) }) {
+                            Text("Cancelar")
+                        }
+                    }
+                )
+            }
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),

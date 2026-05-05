@@ -299,4 +299,25 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         _isDarkTheme.value = isDark
         themeRepository.setDarkThemeEnabled(isDark)
     }
+
+    private val _showClearHistoryDialog = MutableStateFlow(false)
+    val showClearHistoryDialog: StateFlow<Boolean> = _showClearHistoryDialog.asStateFlow()
+
+    private val _snackbarEvent = MutableSharedFlow<String>()
+    val snackbarEvent: SharedFlow<String> = _snackbarEvent.asSharedFlow()
+
+    fun setShowClearHistoryDialog(show: Boolean) {
+        _showClearHistoryDialog.value = show
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                userDataDao.clearHistory()
+            }
+            _snackbarEvent.emit("Historial borrado con éxito")
+            _showClearHistoryDialog.value = false
+        }
+    }
+
 }

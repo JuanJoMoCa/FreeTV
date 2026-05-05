@@ -61,4 +61,8 @@ interface UserDataDao {
 
     @Query("SELECT streamUrl FROM custom_list_channels WHERE listId = :listId")
     fun getChannelsForList(listId: Long): Flow<List<String>>
+
+    @Query("DELETE FROM history")
+    fun clearHistory()
+
 }
