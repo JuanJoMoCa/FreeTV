@@ -44,6 +44,9 @@ import com.example.freetv.player.VideoPlayerManager
 import kotlinx.coroutines.flow.collectLatest
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 
 @Composable
 fun PlayerScreen(
@@ -57,7 +60,7 @@ fun PlayerScreen(
     val configuration = LocalConfiguration.current
     val view = LocalView.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    
+
     var showControls by remember { mutableStateOf(true) }
     var currentUrl by remember { mutableStateOf(initialStreamUrl) }
     var lastVolumeBeforeMute by remember { mutableFloatStateOf(1f) }
@@ -66,11 +69,21 @@ fun PlayerScreen(
     val decodedUrl = remember(currentUrl) {
         URLDecoder.decode(currentUrl, StandardCharsets.UTF_8.toString())
     }
-    
+
     var playbackError by remember { mutableStateOf<String?>(null) }
-    
+
     val videoPlayerManager = remember { VideoPlayerManager(context) }
-    val exoPlayer = remember(decodedUrl) { videoPlayerManager.getPlayer(decodedUrl) }
+
+    val player = videoPlayerManager.getPlayer(
+        url = currentUrl,
+        onError = {
+            Toast.makeText(context, "Error al cargar datos", Toast.LENGTH_LONG).show()
+            val prevUrl = viewModel.previousChannel()
+            if (prevUrl != null) {
+                currentUrl = prevUrl
+            }
+        }
+    )
 
     val isTimerActive by viewModel.isTimerActive.collectAsState()
     val timeRemaining by viewModel.timeRemaining.collectAsState()
@@ -78,12 +91,12 @@ fun PlayerScreen(
 
     LaunchedEffect(Unit) {
         viewModel.timerFinishedEvent.collectLatest {
-            exoPlayer.pause()
+            player.pause()
             Toast.makeText(context, "Temporizador: Video detenido", Toast.LENGTH_LONG).show()
         }
     }
 
-    LaunchedEffect(exoPlayer) {
+    LaunchedEffect(player) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 playbackError = "Canal no disponible"
@@ -94,16 +107,16 @@ fun PlayerScreen(
                 }
             }
         }
-        exoPlayer.addListener(listener)
-        if (exoPlayer.playerError != null) playbackError = "Canal no disponible"
+        player.addListener(listener)
+        if (player.playerError != null) playbackError = "Canal no disponible"
     }
 
     val activity = context as? Activity
-    
+
     LaunchedEffect(isLandscape) {
         val window = activity?.window ?: return@LaunchedEffect
         val controller = WindowCompat.getInsetsController(window, view)
-        
+
         if (isLandscape) {
             controller.hide(WindowInsetsCompat.Type.systemBars())
             controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -122,8 +135,8 @@ fun PlayerScreen(
 
     val retryPlayback = {
         playbackError = null
-        exoPlayer.prepare()
-        exoPlayer.play()
+        player.prepare()
+        player.play()
     }
 
     LaunchedEffect(initialStreamUrl) {
@@ -142,20 +155,42 @@ fun PlayerScreen(
         }
     }
 
+    val navigateToNextChannel = {
+        val newUrl = viewModel.nextChannel()
+        if (newUrl != null) {
+            currentUrl = newUrl
+        } else {
+            Toast.makeText(context, "Fin de la lista", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val navigateToPrevChannel = {
+        val prevUrl = viewModel.previousChannel()
+        if (prevUrl != null) {
+            currentUrl = prevUrl
+        } else {
+            Toast.makeText(context, "Inicio de la lista", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { showControls = !showControls }
     ) {
         if (isLandscape) {
-            PlayerContainer(exoPlayer, modifier = Modifier.fillMaxSize())
-            
-            if (playbackError != null) {
-                ErrorOverlay(message = playbackError!!, onRetry = retryPlayback)
+            Box(modifier = Modifier.fillMaxSize()) {
+                PlayerContainer(player, modifier = Modifier.fillMaxSize())
+
+                VideoGestureOverlay(
+                    onToggleControls = { showControls = !showControls },
+                    onSwipeLeft = navigateToNextChannel,
+                    onSwipeRight = navigateToPrevChannel
+                )
+
+                if (playbackError != null) {
+                    ErrorOverlay(message = playbackError!!, onRetry = retryPlayback)
+                }
             }
 
             AnimatedVisibility(
@@ -174,21 +209,21 @@ fun PlayerScreen(
                     onNavigateBack = onNavigateBack,
                     onNavigateToDetails = { onNavigateToDetails(currentUrl) },
                     onNavigateToSettings = onNavigateToSettings,
-                    onPrevChannel = { viewModel.previousChannel()?.let { currentUrl = it } },
-                    onNextChannel = { viewModel.nextChannel()?.let { currentUrl = it } },
-                    onVolumeChange = { exoPlayer.volume = it },
+                    onPrevChannel = navigateToPrevChannel,
+                    onNextChannel = navigateToNextChannel,
+                    onVolumeChange = { player.volume = it },
                     onToggleMute = {
                         if (isMuted) {
-                            exoPlayer.volume = lastVolumeBeforeMute
+                            player.volume = lastVolumeBeforeMute
                             isMuted = false
                         } else {
-                            lastVolumeBeforeMute = exoPlayer.volume
-                            exoPlayer.volume = 0f
+                            lastVolumeBeforeMute = player.volume
+                            player.volume = 0f
                             isMuted = true
                         }
                     },
                     onToggleOrientation = toggleOrientation,
-                    currentVolume = exoPlayer.volume,
+                    currentVolume = player.volume,
                     isMuted = isMuted,
                     channelName = viewModel.getCurrentChannelName(),
                     isLandscape = true,
@@ -196,7 +231,7 @@ fun PlayerScreen(
                     timeRemaining = timeRemaining,
                     timerMenuExpanded = timerMenuExpanded,
                     onToggleTimerMenu = { viewModel.setTimerMenuExpanded(it) },
-                    onStartTimer = { 
+                    onStartTimer = {
                         viewModel.startSleepTimer(it)
                         Toast.makeText(context, "Temporizador: $it min", Toast.LENGTH_SHORT).show()
                     },
@@ -216,8 +251,14 @@ fun PlayerScreen(
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.DarkGray)
                 ) {
-                    PlayerContainer(exoPlayer, modifier = Modifier.fillMaxSize())
-                    
+                    PlayerContainer(player, modifier = Modifier.fillMaxSize())
+
+                    VideoGestureOverlay(
+                        onToggleControls = { showControls = !showControls },
+                        onSwipeLeft = navigateToNextChannel,
+                        onSwipeRight = navigateToPrevChannel
+                    )
+
                     if (playbackError != null) {
                         ErrorOverlay(message = playbackError!!, onRetry = retryPlayback)
                     }
@@ -233,21 +274,21 @@ fun PlayerScreen(
                     onNavigateBack = onNavigateBack,
                     onNavigateToDetails = { onNavigateToDetails(currentUrl) },
                     onNavigateToSettings = onNavigateToSettings,
-                    onPrevChannel = { viewModel.previousChannel()?.let { currentUrl = it } },
-                    onNextChannel = { viewModel.nextChannel()?.let { currentUrl = it } },
-                    onVolumeChange = { exoPlayer.volume = it },
+                    onPrevChannel = navigateToPrevChannel,
+                    onNextChannel = navigateToNextChannel,
+                    onVolumeChange = { player.volume = it },
                     onToggleMute = {
                         if (isMuted) {
-                            exoPlayer.volume = lastVolumeBeforeMute
+                            player.volume = lastVolumeBeforeMute
                             isMuted = false
                         } else {
-                            lastVolumeBeforeMute = exoPlayer.volume
-                            exoPlayer.volume = 0f
+                            lastVolumeBeforeMute = player.volume
+                            player.volume = 0f
                             isMuted = true
                         }
                     },
                     onToggleOrientation = toggleOrientation,
-                    currentVolume = exoPlayer.volume,
+                    currentVolume = player.volume,
                     isMuted = isMuted,
                     channelName = viewModel.getCurrentChannelName(),
                     isLandscape = false,
@@ -255,7 +296,7 @@ fun PlayerScreen(
                     timeRemaining = timeRemaining,
                     timerMenuExpanded = timerMenuExpanded,
                     onToggleTimerMenu = { viewModel.setTimerMenuExpanded(it) },
-                    onStartTimer = { 
+                    onStartTimer = {
                         viewModel.startSleepTimer(it)
                         Toast.makeText(context, "Temporizador: $it min", Toast.LENGTH_SHORT).show()
                     },
@@ -267,6 +308,43 @@ fun PlayerScreen(
             }
         }
     }
+}
+
+@Composable
+fun VideoGestureOverlay(
+    onToggleControls: () -> Unit,
+    onSwipeLeft: () -> Unit,
+    onSwipeRight: () -> Unit
+) {
+    val swipeThreshold = 100f
+    var offsetX by remember { mutableFloatStateOf(0f) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onToggleControls() }
+                )
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (offsetX < -swipeThreshold) {
+                            onSwipeLeft()
+                        } else if (offsetX > swipeThreshold) {
+                            onSwipeRight()
+                        }
+                        offsetX = 0f
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount
+                    }
+                )
+            }
+    )
 }
 
 @Composable
@@ -385,7 +463,7 @@ fun PlayerControlsColumn(
                         tint = Color.White
                     )
                 }
-                
+
                 Box {
                     FilledIconButton(
                         onClick = { onToggleTimerMenu(true) },
@@ -400,7 +478,7 @@ fun PlayerControlsColumn(
                             tint = Color.White
                         )
                     }
-                    
+
                     DropdownMenu(
                         expanded = timerMenuExpanded,
                         onDismissRequest = { onToggleTimerMenu(false) },

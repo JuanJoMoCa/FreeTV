@@ -22,6 +22,8 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("Todas")
 
+    private var currentPlayingUrl: String? = null
+
     val favoriteUrls: StateFlow<Set<String>> = userDataDao.getAllFavorites()
         .map { list -> list.map { it.streamUrl }.toSet() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
@@ -29,8 +31,6 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     val historyMap: StateFlow<Map<String, Long>> = userDataDao.getHistory()
         .map { list -> list.associate { it.streamUrl to it.lastWatched } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-
-
 
     val channels: StateFlow<List<Channel>> = combine(
         repository.getAllChannels(),
@@ -163,6 +163,7 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun selectChannelByUrl(url: String) {
+        currentPlayingUrl = url
         val index = channels.value.indexOfFirst { it.streamUrl == url }
         if (index != -1) {
             onChannelPlayed(channels.value[index])
@@ -170,18 +171,43 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun nextChannel(): String? {
-        if (channels.value.isEmpty()) return null
+        val list = channels.value
+        if (list.isEmpty()) return null
+
+        val currentIndex = list.indexOfFirst { it.streamUrl == currentPlayingUrl }
+
+        if (currentIndex != -1 && currentIndex < list.size - 1) {
+            val nextChannel = list[currentIndex + 1]
+            currentPlayingUrl = nextChannel.streamUrl
+            onChannelPlayed(nextChannel)
+            return nextChannel.streamUrl
+        }
+
         return null
     }
 
     fun previousChannel(): String? {
-        if (channels.value.isEmpty()) return null
+        val list = channels.value
+        if (list.isEmpty()) return null
+
+        val currentIndex = list.indexOfFirst { it.streamUrl == currentPlayingUrl }
+
+        if (currentIndex > 0) {
+            val prevChannel = list[currentIndex - 1]
+            currentPlayingUrl = prevChannel.streamUrl
+            onChannelPlayed(prevChannel)
+            return prevChannel.streamUrl
+        }
+
         return null
     }
 
     fun getCurrentChannelName(): String {
-        return "Reproduciendo..."
+        val list = channels.value
+        val channel = list.find { it.streamUrl == currentPlayingUrl }
+        return channel?.nombre ?: "Reproduciendo..."
     }
+
 
     fun addCustomChannel(nombre: String, url: String) {
         viewModelScope.launch {
