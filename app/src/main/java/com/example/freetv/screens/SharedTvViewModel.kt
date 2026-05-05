@@ -320,4 +320,33 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private val _aspectRatioMode = MutableStateFlow(AspectRatioMode.FIT)
+    val aspectRatioMode: StateFlow<AspectRatioMode> = _aspectRatioMode.asStateFlow()
+
+    private val _aspectRatioSnackbarEvent = MutableSharedFlow<String>()
+    val aspectRatioSnackbarEvent: SharedFlow<String> = _aspectRatioSnackbarEvent.asSharedFlow()
+
+    fun toggleAspectRatio() {
+        viewModelScope.launch {
+            when (_aspectRatioMode.value) {
+                AspectRatioMode.FIT -> {
+                    _aspectRatioMode.value = AspectRatioMode.FILL
+                    _aspectRatioSnackbarEvent.emit("Modo: Relleno")
+                }
+                AspectRatioMode.FILL -> {
+                    _aspectRatioMode.value = AspectRatioMode.ZOOM
+                    _aspectRatioSnackbarEvent.emit("Modo: Zoom")
+                }
+                AspectRatioMode.ZOOM -> {
+                    _aspectRatioMode.value = AspectRatioMode.FIT
+                    _aspectRatioSnackbarEvent.emit("Modo: Ajustar")
+                }
+            }
+        }
+    }
+
+}
+
+enum class AspectRatioMode {
+    FIT, FILL, ZOOM
 }

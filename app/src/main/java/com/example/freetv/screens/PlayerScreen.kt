@@ -40,6 +40,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.AspectRatioFrameLayout
 import com.example.freetv.player.VideoPlayerManager
 import kotlinx.coroutines.flow.collectLatest
 import java.net.URLDecoder
@@ -88,6 +89,23 @@ fun PlayerScreen(
     val isTimerActive by viewModel.isTimerActive.collectAsState()
     val timeRemaining by viewModel.timeRemaining.collectAsState()
     val timerMenuExpanded by viewModel.timerMenuExpanded.collectAsState()
+    val aspectRatioMode by viewModel.aspectRatioMode.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.aspectRatioSnackbarEvent.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    val currentResizeMode = remember(aspectRatioMode) {
+        when (aspectRatioMode) {
+            AspectRatioMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+            AspectRatioMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+            AspectRatioMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.timerFinishedEvent.collectLatest {
@@ -180,7 +198,7 @@ fun PlayerScreen(
     ) {
         if (isLandscape) {
             Box(modifier = Modifier.fillMaxSize()) {
-                PlayerContainer(player, modifier = Modifier.fillMaxSize())
+                PlayerContainer(player, currentResizeMode, modifier = Modifier.fillMaxSize())
 
                 VideoGestureOverlay(
                     onToggleControls = { showControls = !showControls },
@@ -238,7 +256,8 @@ fun PlayerScreen(
                     onCancelTimer = {
                         viewModel.cancelSleepTimer()
                         Toast.makeText(context, "Temporizador cancelado", Toast.LENGTH_SHORT).show()
-                    }
+                    },
+                    onToggleAspectRatio = { viewModel.toggleAspectRatio() }
                 )
             }
         } else {
@@ -251,7 +270,7 @@ fun PlayerScreen(
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color.DarkGray)
                 ) {
-                    PlayerContainer(player, modifier = Modifier.fillMaxSize())
+                    PlayerContainer(player, currentResizeMode, modifier = Modifier.fillMaxSize())
 
                     VideoGestureOverlay(
                         onToggleControls = { showControls = !showControls },
@@ -303,10 +322,18 @@ fun PlayerScreen(
                     onCancelTimer = {
                         viewModel.cancelSleepTimer()
                         Toast.makeText(context, "Temporizador cancelado", Toast.LENGTH_SHORT).show()
-                    }
+                    },
+                    onToggleAspectRatio = { viewModel.toggleAspectRatio() }
                 )
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+        )
     }
 }
 
@@ -348,7 +375,7 @@ fun VideoGestureOverlay(
 }
 
 @Composable
-fun PlayerContainer(exoPlayer: androidx.media3.exoplayer.ExoPlayer, modifier: Modifier) {
+fun PlayerContainer(exoPlayer: androidx.media3.exoplayer.ExoPlayer, resizeModeInt: Int, modifier: Modifier) {
     AndroidView(
         factory = { ctx ->
             PlayerView(ctx).apply {
@@ -357,6 +384,7 @@ fun PlayerContainer(exoPlayer: androidx.media3.exoplayer.ExoPlayer, modifier: Mo
         },
         update = { view ->
             view.player = exoPlayer
+            view.resizeMode = resizeModeInt
         },
         modifier = modifier
     )
@@ -382,7 +410,8 @@ fun PlayerControlsColumn(
     timerMenuExpanded: Boolean,
     onToggleTimerMenu: (Boolean) -> Unit,
     onStartTimer: (Int) -> Unit,
-    onCancelTimer: () -> Unit
+    onCancelTimer: () -> Unit,
+    onToggleAspectRatio: () -> Unit
 ) {
     Column(
         modifier = modifier,
@@ -460,6 +489,18 @@ fun PlayerControlsColumn(
                     Icon(
                         imageVector = if (isLandscape) Icons.Default.StayCurrentPortrait else Icons.Default.StayCurrentLandscape,
                         contentDescription = "Girar Pantalla",
+                        tint = Color.White
+                    )
+                }
+
+                FilledIconButton(
+                    onClick = onToggleAspectRatio,
+                    modifier = Modifier.size(40.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.DarkGray)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AspectRatio,
+                        contentDescription = "Aspect Ratio",
                         tint = Color.White
                     )
                 }
