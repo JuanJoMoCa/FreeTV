@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -39,6 +40,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.example.freetv.player.VideoPlayerManager
@@ -49,6 +51,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 
+@OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
     initialStreamUrl: String,
@@ -85,6 +88,8 @@ fun PlayerScreen(
             }
         }
     )
+
+    var isPlaying by remember { mutableStateOf(player.isPlaying) }
 
     val isTimerActive by viewModel.isTimerActive.collectAsState()
     val timeRemaining by viewModel.timeRemaining.collectAsState()
@@ -124,9 +129,19 @@ fun PlayerScreen(
                     playbackError = null
                 }
             }
+            override fun onIsPlayingChanged(isPlayingParam: Boolean) {
+                isPlaying = isPlayingParam
+            }
         }
         player.addListener(listener)
         if (player.playerError != null) playbackError = "Canal no disponible"
+    }
+
+    DisposableEffect(isPlaying) {
+        view.keepScreenOn = isPlaying
+        onDispose {
+            view.keepScreenOn = false
+        }
     }
 
     val activity = context as? Activity
@@ -374,6 +389,7 @@ fun VideoGestureOverlay(
     )
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 fun PlayerContainer(exoPlayer: androidx.media3.exoplayer.ExoPlayer, resizeModeInt: Int, modifier: Modifier) {
     AndroidView(
