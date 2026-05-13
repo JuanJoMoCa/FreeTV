@@ -14,10 +14,12 @@ class VideoPlayerManager(val context: Context) {
     private var exoPlayer: ExoPlayer? = null
     private var onErrorCallback: (() -> Unit)? = null
 
+    private var currentStreamUrl: String? = null
 
     @OptIn(UnstableApi::class)
     fun getPlayer(url: String, onError: () -> Unit): ExoPlayer {
         this.onErrorCallback = onError
+
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(context).build().apply {
                 addListener(object : Player.Listener {
@@ -28,17 +30,22 @@ class VideoPlayerManager(val context: Context) {
                 })
             }
         }
-        
-        val dataSourceFactory = DefaultHttpDataSource.Factory()
-        val mediaSource = HlsMediaSource.Factory(dataSourceFactory)
-            .createMediaSource(MediaItem.fromUri(url))
 
-        exoPlayer?.apply {
-            setMediaSource(mediaSource)
-            prepare()
-            playWhenReady = true
+
+        if (currentStreamUrl != url) {
+            currentStreamUrl = url
+
+            val dataSourceFactory = DefaultHttpDataSource.Factory()
+            val mediaSource = HlsMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(MediaItem.fromUri(url))
+
+            exoPlayer?.apply {
+                setMediaSource(mediaSource)
+                prepare()
+                playWhenReady = true
+            }
         }
-        
+
         return exoPlayer!!
     }
 
@@ -46,7 +53,7 @@ class VideoPlayerManager(val context: Context) {
         exoPlayer?.release()
         exoPlayer = null
         onErrorCallback = null
+
+        currentStreamUrl = null
     }
-
-
 }
