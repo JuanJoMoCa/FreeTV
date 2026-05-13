@@ -44,12 +44,27 @@ fun HomeScreen(
     val recents by viewModel.recents.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    
+
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("Todas") }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.snackbarEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    contentColor = Color.White
+                )
+            }
+        },
         topBar = {
             LargeTopAppBar(
                 title = {
@@ -77,8 +92,8 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { 
-                        isSearchActive = !isSearchActive 
+                    IconButton(onClick = {
+                        isSearchActive = !isSearchActive
                         if (!isSearchActive) {
                             searchQuery = ""
                             viewModel.loadChannels()
@@ -92,7 +107,6 @@ fun HomeScreen(
                     IconButton(onClick = onNavigateToAddChannel) {
                         Icon(Icons.Default.Add, contentDescription = "Agregar Canal")
                     }
-
                     IconButton(onClick = onNavigateToMyLists) {
                         Icon(Icons.Default.List, contentDescription = "Mis Listas")
                     }
@@ -116,7 +130,7 @@ fun HomeScreen(
                     items(categories) { category ->
                         FilterChip(
                             selected = selectedCategory == category,
-                            onClick = { 
+                            onClick = {
                                 selectedCategory = category
                                 viewModel.selectCategory(category)
                             },
@@ -150,9 +164,10 @@ fun HomeScreen(
                     ) {
                         items(favorites) { channel ->
                             ChannelCardLarge(
-                                channel = channel, 
+                                channel = channel,
                                 onClick = { onNavigateToPlayer(channel.streamUrl) },
-                                onToggleFav = { viewModel.toggleFavorite(channel) }
+                                onToggleFav = { viewModel.toggleFavorite(channel) },
+                                onTogglePin = { viewModel.togglePin(channel) }
                             )
                         }
                     }
@@ -176,9 +191,10 @@ fun HomeScreen(
                             rowChannels.forEach { channel ->
                                 Box(Modifier.weight(1f)) {
                                     ChannelCardCompact(
-                                        channel = channel, 
+                                        channel = channel,
                                         onClick = { onNavigateToPlayer(channel.streamUrl) },
-                                        onToggleFav = { viewModel.toggleFavorite(channel) }
+                                        onToggleFav = { viewModel.toggleFavorite(channel) },
+                                        onTogglePin = { viewModel.togglePin(channel) }
                                     )
                                 }
                             }
@@ -218,7 +234,7 @@ fun RecentChannelCard(channel: Channel, onClick: () -> Unit) {
 }
 
 @Composable
-fun ChannelCardLarge(channel: Channel, onClick: () -> Unit, onToggleFav: () -> Unit) {
+fun ChannelCardLarge(channel: Channel, onClick: () -> Unit, onToggleFav: () -> Unit, onTogglePin: () -> Unit) {
     Card(
         modifier = Modifier.width(140.dp).shadow(8.dp, RoundedCornerShape(16.dp)).clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
@@ -227,8 +243,15 @@ fun ChannelCardLarge(channel: Channel, onClick: () -> Unit, onToggleFav: () -> U
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box {
                 AsyncImage(model = channel.logoUrl, contentDescription = channel.nombre, modifier = Modifier.fillMaxWidth().height(120.dp).padding(12.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
-                IconButton(onClick = onToggleFav, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).background(Color.Black.copy(alpha = 0.2f), CircleShape).size(32.dp)) {
-                    Icon(imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = "Favorito", tint = if (channel.isFavorite) Color.Red else Color.White, modifier = Modifier.size(18.dp))
+
+                Row(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+                    IconButton(onClick = onTogglePin, modifier = Modifier.background(Color.Black.copy(alpha = 0.2f), CircleShape).size(32.dp)) {
+                        Icon(imageVector = Icons.Default.PushPin, contentDescription = "Anclar", tint = if (channel.isPinned) Color(0xFF2196F3) else Color.White, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(onClick = onToggleFav, modifier = Modifier.background(Color.Black.copy(alpha = 0.2f), CircleShape).size(32.dp)) {
+                        Icon(imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = "Favorito", tint = if (channel.isFavorite) Color.Red else Color.White, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
             Text(text = channel.nombre, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -238,7 +261,7 @@ fun ChannelCardLarge(channel: Channel, onClick: () -> Unit, onToggleFav: () -> U
 }
 
 @Composable
-fun ChannelCardCompact(channel: Channel, onClick: () -> Unit, onToggleFav: () -> Unit) {
+fun ChannelCardCompact(channel: Channel, onClick: () -> Unit, onToggleFav: () -> Unit, onTogglePin: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
@@ -248,8 +271,14 @@ fun ChannelCardCompact(channel: Channel, onClick: () -> Unit, onToggleFav: () ->
         Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.weight(1f)) {
                 AsyncImage(model = channel.logoUrl, contentDescription = channel.nombre, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
-                IconButton(onClick = onToggleFav, modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).size(36.dp)) {
-                    Icon(imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = if (channel.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+
+                Row(modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)) {
+                    IconButton(onClick = onTogglePin, modifier = Modifier.size(36.dp)) {
+                        Icon(imageVector = Icons.Default.PushPin, contentDescription = "Anclar", tint = if (channel.isPinned) Color(0xFF2196F3) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = onToggleFav, modifier = Modifier.size(36.dp)) {
+                        Icon(imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = if (channel.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))

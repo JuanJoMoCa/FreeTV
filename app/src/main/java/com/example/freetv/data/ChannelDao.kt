@@ -23,6 +23,12 @@ interface ChannelDao {
     @Query("UPDATE channels SET isFavorite = :isFavorite WHERE id = :id")
     fun updateFavorite(id: Long, isFavorite: Boolean): Int
 
+    @Query("UPDATE channels SET isPinned = :isPinned WHERE id = :id")
+    fun updatePinned(id: Long, isPinned: Boolean): Int
+
+    @Query("SELECT COUNT(*) FROM channels WHERE isPinned = 1")
+    fun getPinnedCount(): Int
+
     @Query("UPDATE channels SET lastWatched = :timestamp WHERE id = :id")
     fun updateLastWatched(id: Long, timestamp: Long): Int
 

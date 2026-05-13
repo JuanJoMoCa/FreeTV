@@ -26,6 +26,14 @@ class ChannelRepository(private val channelDao: ChannelDao) {
         channelDao.updateFavorite(id, isFavorite)
     }
 
+    suspend fun updatePinned(id: Long, isPinned: Boolean) = withContext(Dispatchers.IO) {
+        channelDao.updatePinned(id, isPinned)
+    }
+
+    suspend fun getPinnedCount(): Int = withContext(Dispatchers.IO) {
+        channelDao.getPinnedCount()
+    }
+
     suspend fun updateLastWatched(id: Long) = withContext(Dispatchers.IO) {
         channelDao.updateLastWatched(id, System.currentTimeMillis())
     }

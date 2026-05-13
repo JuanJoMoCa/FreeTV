@@ -44,6 +44,7 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
                 val matchesCategory = category == "Todas" || channel.categoria == category
                 matchesQuery && matchesCategory
             }
+            .sortedWith(compareByDescending<Channel> { it.isPinned }.thenBy { it.nombre })
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val settings: StateFlow<Map<String, String>> = settingDao.getAllSettings()
@@ -150,6 +151,21 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
                 } else {
                     userDataDao.addFavorite(FavoriteEntity(channel.streamUrl))
                 }
+            }
+        }
+    }
+
+    fun togglePin(channel: Channel) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                if (!channel.isPinned) {
+                    val pinnedCount = repository.getPinnedCount()
+                    if (pinnedCount >= 5) {
+                        _snackbarEvent.emit("Límite alcanzado. Máximo 5 canales anclados.")
+                        return@withContext
+                    }
+                }
+                repository.updatePinned(channel.id, !channel.isPinned)
             }
         }
     }
