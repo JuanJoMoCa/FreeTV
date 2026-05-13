@@ -15,10 +15,23 @@ class ChannelRepository(private val channelDao: ChannelDao) {
     fun getCategories(): Flow<List<String>> = channelDao.getCategories()
 
     suspend fun syncChannels() = withContext(Dispatchers.IO) {
+        val currentChannels = channelDao.getAllChannelsSync()
+
+        val pinnedUrls = currentChannels.filter { it.isPinned }.map { it.streamUrl }.toSet()
+        val favoriteUrls = currentChannels.filter { it.isFavorite }.map { it.streamUrl }.toSet()
+
         val newChannels = m3uParser.parseFromUrl(m3uUrl)
+
         if (newChannels.isNotEmpty()) {
+            val updatedChannels = newChannels.map { channel ->
+                channel.copy(
+                    isPinned = channel.streamUrl in pinnedUrls,
+                    isFavorite = channel.streamUrl in favoriteUrls
+                )
+            }
+
             channelDao.clearAllChannels()
-            channelDao.insertChannels(newChannels)
+            channelDao.insertChannels(updatedChannels)
         }
     }
 

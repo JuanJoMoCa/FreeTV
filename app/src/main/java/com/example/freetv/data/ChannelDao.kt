@@ -5,8 +5,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ChannelDao {
-    @Query("SELECT * FROM channels ORDER BY nombre ASC")
+    @Query("SELECT * FROM channels ORDER BY isPinned DESC, nombre ASC")
     fun getAllChannels(): Flow<List<Channel>>
+
+    @Query("SELECT * FROM channels")
+    fun getAllChannelsSync(): List<Channel>
 
     @Query("SELECT * FROM channels WHERE isFavorite = 1")
     fun getFavoriteChannels(): Flow<List<Channel>>
