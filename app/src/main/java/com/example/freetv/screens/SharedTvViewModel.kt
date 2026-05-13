@@ -22,6 +22,9 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow("Todas")
 
+    private val _isInPipMode = MutableStateFlow(false)
+    val isInPipMode: StateFlow<Boolean> = _isInPipMode.asStateFlow()
+
     private var currentPlayingUrl: String? = null
 
     val favoriteUrls: StateFlow<Set<String>> = userDataDao.getAllFavorites()
@@ -104,6 +107,10 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun setPipMode(isInPipMode: Boolean) {
+        _isInPipMode.value = isInPipMode
     }
 
     fun updateSetting(key: String, value: String) {
