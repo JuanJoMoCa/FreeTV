@@ -45,9 +45,11 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.freetv.player.VideoPlayerManager
+import com.example.freetv.utils.CompartirUtils
 import kotlinx.coroutines.flow.collectLatest
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -222,6 +224,23 @@ fun PlayerScreen(
         }
     }
 
+    val compartirCanalActual = {
+        val canalActual = viewModel.obtenerCanalActual()
+
+        if (canalActual != null) {
+            CompartirUtils.compartirCanal(
+                contexto = context,
+                canal = canalActual
+            )
+        } else {
+            Toast.makeText(
+                context,
+                "No se pudo obtener la información del canal.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     if (isInPipMode) {
         Box(
             modifier = Modifier
@@ -278,6 +297,7 @@ fun PlayerScreen(
                         onNavigateBack = onNavigateBack,
                         onNavigateToDetails = { onNavigateToDetails(currentUrl) },
                         onNavigateToSettings = onNavigateToSettings,
+                        onCompartirCanal = compartirCanalActual,
                         onPrevChannel = navigateToPrevChannel,
                         onNextChannel = navigateToNextChannel,
                         onVolumeChange = { player.volume = it },
@@ -359,6 +379,7 @@ fun PlayerScreen(
                         onNavigateBack = onNavigateBack,
                         onNavigateToDetails = { onNavigateToDetails(currentUrl) },
                         onNavigateToSettings = onNavigateToSettings,
+                        onCompartirCanal = compartirCanalActual,
                         onPrevChannel = navigateToPrevChannel,
                         onNextChannel = navigateToNextChannel,
                         onVolumeChange = { player.volume = it },
@@ -476,6 +497,7 @@ fun PlayerControlsColumn(
     onNavigateBack: () -> Unit,
     onNavigateToDetails: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onCompartirCanal: () -> Unit,
     onPrevChannel: () -> Unit,
     onNextChannel: () -> Unit,
     onVolumeChange: (Float) -> Unit,
@@ -509,7 +531,7 @@ fun PlayerControlsColumn(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(
                     onClick = onNavigateBack,
                     modifier = Modifier
@@ -533,6 +555,20 @@ fun PlayerControlsColumn(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = "Detalles",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onCompartirCanal,
+                    modifier = Modifier
+                        .background(Color(0xFF1976D2), CircleShape)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Compartir canal",
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )

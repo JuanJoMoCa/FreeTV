@@ -231,6 +231,15 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         return channel?.nombre ?: "Reproduciendo..."
     }
 
+    fun obtenerCanalActual(): Channel? {
+        val lista = channels.value
+        return lista.find { it.streamUrl == currentPlayingUrl }
+    }
+
+    fun obtenerCanalPorUrl(url: String): Channel? {
+        val lista = channels.value
+        return lista.find { it.streamUrl == url }
+    }
 
     fun addCustomChannel(nombre: String, url: String) {
         viewModelScope.launch {
