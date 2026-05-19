@@ -377,6 +377,38 @@ class SharedTvViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun renameCustomList(list: CustomListEntity, newName: String) {
+        if (newName.isBlank()) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                userDataDao.updateCustomList(list.copy(name = newName.trim()))
+            }
+        }
+    }
+
+    fun deleteCustomList(list: CustomListEntity) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                userDataDao.deleteChannelsForList(list.id)
+                userDataDao.deleteCustomList(list)
+            }
+            _snackbarEvent.emit("Lista eliminada")
+        }
+    }
+
+    fun getChannelsForListId(listId: Long): Flow<List<Channel>> {
+        return combine(
+            userDataDao.getChannelsForList(listId),
+            repository.getAllChannels()
+        ) { urls, allChannels ->
+            allChannels.filter { it.streamUrl in urls }
+        }
+    }
+
+    fun getCustomListById(listId: Long): CustomListEntity? {
+        return customLists.value.find { it.id == listId }
+    }
+
 }
 
 enum class AspectRatioMode {

@@ -41,17 +41,14 @@ interface UserDataDao {
     @Query("SELECT * FROM favorites")
     fun getAllFavorites(): Flow<List<FavoriteEntity>>
 
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun addHistory(history: HistoryEntity): Long
 
     @Query("SELECT * FROM history ORDER BY lastWatched DESC LIMIT 20")
     fun getHistory(): Flow<List<HistoryEntity>>
 
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertCustomList(customList: CustomListEntity): Long
-
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertChannelsToCustomList(channels: List<CustomListChannel>): List<Long>
@@ -65,4 +62,12 @@ interface UserDataDao {
     @Query("DELETE FROM history")
     fun clearHistory()
 
+    @Update
+    fun updateCustomList(customList: CustomListEntity)
+
+    @Delete
+    fun deleteCustomList(customList: CustomListEntity)
+
+    @Query("DELETE FROM custom_list_channels WHERE listId = :listId")
+    fun deleteChannelsForList(listId: Long)
 }
